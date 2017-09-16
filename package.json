@@ -1,0 +1,32 @@
+{
+  "name": "Kick",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "start": "node node_modules/react-native/local-cli/cli.js start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "moment": "^2.18.1",
+    "query-string": "^4.3.4",
+    "querystring": "^0.2.0",
+    "react": "16.0.0-alpha.6",
+    "react-native": "^0.44.0",
+    "react-native-spotify": "^1.0.1",
+    "react-native-spotify-sdk": "^1.1.4",
+    "react-navigation": "^1.0.0-beta.11",
+    "underscore": "^1.8.3",
+    "underscore-es": "^1.9.8",
+    "url-search-params": "^0.9.0"
+  },
+  "devDependencies": {
+    "babel-jest": "19.0.0",
+    "babel-preset-react-native": "1.9.1",
+    "buffer": "^5.0.7",
+    "jest": "19.0.2",
+    "react-test-renderer": "16.0.0-alpha.6"
+  },
+  "jest": {
+    "preset": "react-native"
+  }
+}
