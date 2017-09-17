@@ -14,6 +14,10 @@ import {
   FlatList,
   Image
 } from 'react-native';
+import {
+  List,
+  ListItem
+} from 'react-native-elements';
 import { StackNavigator } from 'react-navigation';
 
 import _groupBy from 'underscore-es/groupBy';
@@ -498,63 +502,42 @@ class Playback extends Component {
 
 class SongList extends Component {
   render() {
-    const trackItemStyle = {
-      flexDirection: 'row',
-      alignItems: 'stretch'
-    };
-
-    const trackInfoStyle = {
-      flex: 1,
-      flexDirection: 'column'
-    };
-
-    const trackAlbumArtStyle = {
-      width: 64,
-      height: 64,
-      marginRight: 10
-    };
-
-    const trackNameStyle = {
-      fontSize: 12,
-      marginBottom: 5
-    };
-
-    const trackArtistStyle = {
-      fontSize: 10,
-      marginBottom: 2
-    }
-
     const itemRenderer = ({ item }) => {
       return (
-        <TouchableHighlight
-          onPress={() => this.props.songPressed(item.id)}
-          style={trackItemStyle}
-          key={item.id}
-        >
-          <View style={trackItemStyle}>
+        <ListItem
+          avatar={
             <Image
-              style={trackAlbumArtStyle}
-              source={{
-                uri: item.image.url
-              }}
+              source={{ uri: item.image.url }}
+              style={{ width: 64, height: 64 }}
             />
-            <View style={trackInfoStyle}>
-              <Text style={trackNameStyle}>{item.name}</Text>
-              <Text style={trackArtistStyle}>{item.artists.join(' ')}</Text>
-            </View>
-          </View>
-        </TouchableHighlight>
+          }
+          containerStyle={{
+            paddingLeft: 0,
+            paddingTop: 0,
+            paddingRight: 0,
+            paddingBottom: 0,
+            height: 64,
+            marginLeft: -10
+          }}
+          titleContainerStyle={{ marginLeft: 24 }}
+          subtitleContainerStyle={{ marginLeft: 24 }}
+          title={item.name}
+          subtitle={item.artists.join(' ')}
+          onPress={() => this.props.songPressed(item.id)}
+          hideChevron
+        />
       );
     }
 
     return (
       <View style={{ flex: 1 }}>
-        <FlatList
-          data={this.props.arrangedTracks}
-          renderItem={itemRenderer}
-          keyExtractor={item => item.id}
-          style={{ flex: 1, flexDirection: 'row' }}
-        />
+        <List style={{ flex: 1 }} conatinerStyle={{ marginLeft: 0 }}>
+          <FlatList
+            data={this.props.arrangedTracks}
+            renderItem={itemRenderer}
+            keyExtractor={item => item.id}
+          />
+        </List>
       </View>
     );
   }
