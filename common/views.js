@@ -430,7 +430,14 @@ class Songs extends Component {
       }) : ({ candidate, total }),
       ({ candidate: this.arrangedTracks[0], total: 0 })
     ).candidate;
-    this.player.track(formatTrackFromId(currentlyPlayingTrack.id), track => track.play());
+    this.player.track(formatTrackFromId(currentlyPlayingTrack.id)).then(track => track.resume());
+  }
+
+  songPressed(id) {
+    if (!this.player)
+      return;
+
+    this.player.track(formatTrackFromId(id), track => track.play());
   }
 
   render() {
@@ -462,18 +469,20 @@ class Songs extends Component {
     }
 
     const itemRenderer = ({ item }) => (
-      <View style={trackItemStyle} key={item.id}>
-        <Image
-          style={trackAlbumArtStyle}
-          source={{
-            uri: item.image.url
-          }}
-        />
-        <View style={trackInfoStyle}>
-          <Text style={trackNameStyle}>{item.name}</Text>
-          <Text style={trackArtistStyle}>{item.artists.join(' ')}</Text>
+      <TouchableHighlight onPress={() => this.songPressed(item.id)}>
+        <View style={trackItemStyle} key={item.id}>
+          <Image
+            style={trackAlbumArtStyle}
+            source={{
+              uri: item.image.url
+            }}
+          />
+          <View style={trackInfoStyle}>
+            <Text style={trackNameStyle}>{item.name}</Text>
+            <Text style={trackArtistStyle}>{item.artists.join(' ')}</Text>
+          </View>
         </View>
-      </View>
+      </TouchableHighlight>
     );
 
     const tracks = this.arrangedTracks;

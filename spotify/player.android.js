@@ -6,16 +6,24 @@ class Track {
   }
 
   pause() {
-    Spotify.pause();
+    return Spotify.pause();
   }
 
   play() {
-    Spotify.playUri(this.uri);
-    console.log(`Not implemented, would resume`);
+    return Spotify.resume();
   }
 
   seek(seconds) {
     console.log(`Not implemented, would seek to ${seconds}`);
+    return Promise.resolve();
+  }
+
+  state() {
+    return Spotify.playbackState();
+  }
+
+  metadata() {
+    return Spotify.playbackMetadata();
   }
 }
 
@@ -24,16 +32,17 @@ export default class Player {
     this.playingTrack = null;
   }
 
-  track(uri, mutator) {
+  track(uri) {
     /* Playing this track, use that */
     if (this.playingTrack && this.playingTrack.uri == uri) {
-      mutator(this.playingTrack);
-      return;
+      return Promise.resolve(this.playingTrack);
     }
 
     /* Update the playing track and try again */
     this.playingTrack = new Track(uri);
-
-    this.track(uri, mutator);
+    return Spotify.playUri(uri).then(() =>
+      /* Immediately pause it and let the player figure out what to do */
+      this.playingTrack.pause().then(() => this.track(uri))
+    );
   }
 }
