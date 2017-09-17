@@ -391,6 +391,8 @@ class Playbar extends Component {
           minimumValue={0}
           maximumValue={this.props.duration}
           style={{flex: 4}}
+          value={this.props.location}
+          onSlidingComplete={this.props.seekToPosition}
         />
         <Text>{formatTime(this.props.duration)}</Text>
       </View>
@@ -402,7 +404,7 @@ function locationToTrack(location, arrangedTracks) {
   const locationMs = location * 1000;
 
   return arrangedTracks.reduce(({ candidate, total, found }, track) => {
-    const offsetWithinTotalAndLocation = total - locationMs;
+    const offsetWithinTotalAndLocation = locationMs - total;
     return (
       !found &&
       offsetWithinTotalAndLocation >= 0 &&
@@ -411,7 +413,7 @@ function locationToTrack(location, arrangedTracks) {
       candidate: track,
       total: total + track.duration_ms,
       found: true
-    } : { candidate, total: total + track.duration_ms }
+    } : { candidate, total: total + track.duration_ms, found }
   }, { candidate: arrangedTracks[0], total: 0, found: false }).candidate;
 }
 
@@ -451,16 +453,15 @@ class Playback extends Component {
     }
 
     if (nextState.location !== this.state.location) {
-      /* Check if we would have a different track. If so, make that the active
-       * one and play it */
-      const lastTrack = locationToTrack(this.state.location, this.props.arrangedTracks);
+      /* Make the current track active and seek */
       const nextTrack = locationToTrack(nextState.location, this.props.arrangedTracks);
-
-      if (lastTrack !== nextTrack) {
-        this.player.track(formatTrackFromId(nextTrack.id)).then(track =>
+      const nextTrackLocation = trackToLocation(nextTrack.id, this.props.arrangedTracks);
+      const locationWithinTrack = nextState.location - nextTrackLocation;
+      this.player.track(formatTrackFromId(nextTrack.id)).then(track =>
+        track.seek(locationWithinTrack * 1000).then(() =>
           nextState.playing ? track.play() : track.pause()
-        );
-      }
+        )
+      );
     }
   }
 
