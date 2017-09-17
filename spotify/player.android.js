@@ -13,9 +13,8 @@ class Track {
     return Spotify.resume();
   }
 
-  seek(seconds) {
-    console.log(`Not implemented, would seek to ${seconds}`);
-    return Promise.resolve();
+  seek(ms) {
+    return Spotify.seekToPosition(ms);
   }
 
   state() {
