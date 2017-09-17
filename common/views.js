@@ -369,6 +369,197 @@ function formatTrackFromId(id) {
   return `spotify:track:${id}`;
 }
 
+class Playbar extends Component {
+  render() {
+    return (
+      <View style={{ flexDirection: 'row', height: 64 }} >
+        <TouchableHighlight onPress={() => this.props.playPauseButtonPressed()}>
+          <View
+            style={{
+              flex: 1,
+              backgroundColor: 'red',
+              height: 64,
+              width: 64
+            }}
+          />
+        </TouchableHighlight>
+        <Slider
+          minimumValue={0}
+          maximumValue={this.props.duration}
+          style={{flex: 4}}
+        />
+        <Text>{formatTime(this.props.duration)}</Text>
+      </View>
+    )
+  }
+}
+
+function locationToTrack(location, arrangedTracks) {
+  const locationMs = location * 1000;
+
+  return arrangedTracks.reduce(({ candidate, total, found }, track) => {
+    const offsetWithinTotalAndLocation = total - locationMs;
+    return (
+      !found &&
+      offsetWithinTotalAndLocation >= 0 &&
+      offsetWithinTotalAndLocation < track.duration_ms
+    ) ? {
+      candidate: track,
+      total: total + track.duration_ms,
+      found: true
+    } : { candidate, total: total + track.duration_ms }
+  }, { candidate: arrangedTracks[0], total: 0, found: false }).candidate;
+}
+
+function trackToLocation(uri, arrangedTracks) {
+  let locationMs = 0;
+
+  for (let track of arrangedTracks) {
+    if (track.id === uri)
+      break;
+    else
+      locationMs += track.duration_ms;
+  }
+
+  return locationMs / 1000;
+}
+
+class Playback extends Component {
+  constructor(props) {
+    super(props);
+    this.player = null;
+    this.state = {
+      playing: false,
+      location: 0
+    };
+  }
+
+  componentDidMount() {
+    this.player = new Player();
+  }
+
+  componentWillUpdate(nextProps, nextState) {
+    if (nextState.playing !== this.state.playing) {
+      const currentlyPlayingTrack = locationToTrack(this.state.location, this.props.arrangedTracks);
+      this.player.track(formatTrackFromId(currentlyPlayingTrack.id)).then(track =>
+        nextState.playing ? track.play() : track.pause()
+      );
+    }
+
+    if (nextState.location !== this.state.location) {
+      /* Check if we would have a different track. If so, make that the active
+       * one and play it */
+      const lastTrack = locationToTrack(this.state.location, this.props.arrangedTracks);
+      const nextTrack = locationToTrack(nextState.location, this.props.arrangedTracks);
+
+      if (lastTrack !== nextTrack) {
+        this.player.track(formatTrackFromId(nextTrack.id)).then(track =>
+          nextState.playing ? track.play() : track.pause()
+        );
+      }
+    }
+  }
+
+  playPauseButtonPressed() {
+    if (!this.player)
+      return;
+
+    this.setState({
+      playing: !this.state.playing
+    });    
+  }
+
+  goToSong(uri) {
+    this.setState({
+      location: trackToLocation(uri, this.props.arrangedTracks)
+    });
+  }
+
+  seekToPosition(pos) {
+    this.setState({
+      location: pos
+    });
+  }
+
+  render() {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {this.props.render({
+          playing: this.state.playing,
+          location: this.state.location,
+          goToSong: uri => this.goToSong(uri),
+          seekToPosition: pos => this.seekToPosition(pos),
+          toggle: () => this.playPauseButtonPressed()
+        })}
+      </View>
+    );
+  }
+}
+
+class SongList extends Component {
+  render() {
+    const trackItemStyle = {
+      flexDirection: 'row',
+      alignItems: 'stretch'
+    };
+
+    const trackInfoStyle = {
+      flex: 1,
+      flexDirection: 'column'
+    };
+
+    const trackAlbumArtStyle = {
+      width: 64,
+      height: 64,
+      marginRight: 10
+    };
+
+    const trackNameStyle = {
+      fontSize: 12,
+      marginBottom: 5
+    };
+
+    const trackArtistStyle = {
+      fontSize: 10,
+      marginBottom: 2
+    }
+
+    const itemRenderer = ({ item }) => {
+      return (
+        <TouchableHighlight
+          onPress={() => this.props.songPressed(item.id)}
+          style={trackItemStyle}
+          key={item.id}
+        >
+          <View style={trackItemStyle}>
+            <Image
+              style={trackAlbumArtStyle}
+              source={{
+                uri: item.image.url
+              }}
+            />
+            <View style={trackInfoStyle}>
+              <Text style={trackNameStyle}>{item.name}</Text>
+              <Text style={trackArtistStyle}>{item.artists.join(' ')}</Text>
+            </View>
+          </View>
+        </TouchableHighlight>
+      );
+    }
+
+    return (
+      <View style={{ flex: 1 }}>
+        <FlatList
+          data={this.props.arrangedTracks}
+          renderItem={itemRenderer}
+          keyExtractor={item => item.id}
+          style={{ flex: 1, flexDirection: 'row' }}
+        />
+      </View>
+    );
+  }
+}
+
 class Songs extends Component {
   static navigationOptions = {
     title: 'Your Music',
@@ -399,8 +590,6 @@ class Songs extends Component {
         classifiedTracks: classified
       })
     ).catch(e => console.error(e));
-
-    this.player = new Player();
   }
 
   componentWillUpdate(nextProps, nextState) {
@@ -417,108 +606,30 @@ class Songs extends Component {
     });
   }
 
-  playPauseButtonPressed() {
-    console.log('Play pause button pressed');
-
-    if (!this.player)
-      return;
-
-    const currentlyPlayingTrack = this.arrangedTracks.reduce(({ candidate, total }, track) =>
-      total + (track.duration_ms / 1000) < this.playbackLocation ? ({
-        candidate: track,
-        total: total + (track.duration_ms / 1000)
-      }) : ({ candidate, total }),
-      ({ candidate: this.arrangedTracks[0], total: 0 })
-    ).candidate;
-    this.player.track(formatTrackFromId(currentlyPlayingTrack.id)).then(track => track.resume());
-  }
-
-  songPressed(id) {
-    if (!this.player)
-      return;
-
-    this.player.track(formatTrackFromId(id), track => track.play());
-  }
-
   render() {
-    const trackItemStyle = {
-      flex: 1,
-      flexDirection: 'row',
-      alignItems: 'stretch'
-    };
-
-    const trackInfoStyle = {
-      flex: 1,
-      flexDirection: 'column'
-    };
-
-    const trackAlbumArtStyle = {
-      width: 64,
-      height: 64,
-      marginRight: 10
-    };
-
-    const trackNameStyle = {
-      fontSize: 12,
-      marginBottom: 5
-    };
-
-    const trackArtistStyle = {
-      fontSize: 10,
-      marginBottom: 2
-    }
-
-    const itemRenderer = ({ item }) => (
-      <TouchableHighlight onPress={() => this.songPressed(item.id)}>
-        <View style={trackItemStyle} key={item.id}>
-          <Image
-            style={trackAlbumArtStyle}
-            source={{
-              uri: item.image.url
-            }}
-          />
-          <View style={trackInfoStyle}>
-            <Text style={trackNameStyle}>{item.name}</Text>
-            <Text style={trackArtistStyle}>{item.artists.join(' ')}</Text>
-          </View>
-        </View>
-      </TouchableHighlight>
-    );
-
-    const tracks = this.arrangedTracks;
-    const totalDuration = computeTotalDurationSeconds(tracks);
-
     return (
       <View style={styles.container}>
         <View style={styles.welcome_back_banner}>
           <Text style={styles.welcome}>{this.state.welcome_text}</Text>
         </View>
-        <View style={{ flex: 1, flexDirection: 'row' }}>
-          <FlatList
-            data={tracks}
-            renderItem={itemRenderer}
-            keyExtractor={item => item.id}
-            style={{ flex: 1 }}
-          />
-        </View>
-        <View style={{ flexDirection: 'row', height: 64 }} >
-          <TouchableHighlight onPress={() => this.playPauseButtonPressed()}>
-            <View
-              style={{
-                flex: 1,
-                backgroundColor: 'red',
-                height: 64,
-                width: 64
-              }}
-            />
-          </TouchableHighlight>
-          <Slider
-            minimumValue={0}
-            maximumValue={totalDuration}
-            style={{flex: 4}}
-          />
-          <Text>{formatTime(totalDuration)}</Text>
-        </View>
+        <Playback
+          arrangedTracks={this.arrangedTracks}
+          render={({ playing, location, goToSong, seekToPosition, toggle }) => (
+            <View style={{ flex: 1 }}>
+              <SongList
+                songPressed={goToSong}
+                arrangedTracks={this.arrangedTracks}
+              />
+              <Playbar
+                location={location}
+                playing={playing}
+                seekToPosition={seekToPosition}
+                duration={computeTotalDurationSeconds(this.arrangedTracks)}
+                playPauseButtonPressed={toggle}
+                style={{ flex: 1, flexDirection: 'row' }}
+              />
+            </View>
+        )}/>
       </View>
     );
   }
