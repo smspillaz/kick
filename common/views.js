@@ -18,6 +18,7 @@ import {
   List,
   ListItem
 } from 'react-native-elements';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 import { StackNavigator } from 'react-navigation';
 
 import _groupBy from 'underscore-es/groupBy';
@@ -376,17 +377,13 @@ function formatTrackFromId(id) {
 class Playbar extends Component {
   render() {
     return (
-      <View style={{ flexDirection: 'row', height: 64 }} >
-        <TouchableHighlight onPress={() => this.props.playPauseButtonPressed()}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'red',
-              height: 64,
-              width: 64
-            }}
-          />
-        </TouchableHighlight>
+      <View style={{ flexDirection: 'row' }} >
+        <MaterialIcons.Button
+          mdPlay
+          onPress={this.props.playPauseButtonPressed}
+          style={{ height: 64, width: 64 }}
+          backgroundColor="#ffffff"
+        />
         <Slider
           minimumValue={0}
           maximumValue={this.props.duration}
